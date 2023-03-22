@@ -5,13 +5,12 @@ router.use(bodyParser.json());
 
 const { user_signup} = require('../controllers/signup');
 const { validate_signup } = require('../middleware/validate_requests');
-const { start } = require('../controllers/auth');
+const { brokerage_auth_login } = require('../controllers/auth');
 
 
 // CONTROLLERS OF AUTHENTICATION
 router.post('/signup', validate_signup, user_signup);
-router.get('/start', start);
-router.post('/start', start);
+router.post('/brokerage_auth_login', brokerage_auth_login);
 
 
 module.exports = router;
