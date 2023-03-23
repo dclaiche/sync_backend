@@ -18,22 +18,26 @@ const robinhood_get_auth = async (req, res) => {
     var credentials = {username, password};
     const token = await new Promise(async (resolve, reject) => {
         var Robinhood = require('robinhood')(credentials, async (err, data) => {
-            var mfa_code = await getMfaToken(code);
             if(err) {
-                resolve(err);
+                const responseMatch = err.message.match(/\{.*\}/s);
+                const response = responseMatch ? responseMatch[0] : '{}';
+                const { statusCode, body } = JSON.parse(response);
+                resolve({'code' : statusCode, 'body' : body});
             } else {
+                var mfa_code = await getMfaToken(code);
                 if (data && data.mfa_required) {
                 if (!mfa_code) {
                     console.log('mfa code required');
                 } else {
                     Robinhood.set_mfa_code(mfa_code, () => {
                         const token = Robinhood.auth_token();
-                        console.log(`token in model:  + ${token}`);
+                        console.log(token);
                         resolve(token);
                     });
                 }
                 }
                 else {
+                    console.log("no mfa required")
                     const token = Robinhood.auth_token();
                     resolve(token);
                 }
@@ -44,6 +48,47 @@ return token;
 
 }
 
+
+const robinhood_get_account = async (req, res) => {
+    var credentials = {"username" : "dclaiche@hotmail.com", "password" : "Dxto80kgwvvl$"};
+
+    const token = await new Promise(async (resolve, reject) => {
+        var Robinhood = require('robinhood')(credentials, async (err, data) => {
+            var mfa_code = await getMfaToken("5EDENVA5RQ5AT7VZ");
+            console.log(Robinhood.auth_token());
+            if(err) {
+                const responseMatch = err.message.match(/\{.*\}/s);
+                const response = responseMatch ? responseMatch[0] : '{}';
+                const { statusCode, body } = JSON.parse(response);
+                resolve({'code' : statusCode, 'body' : body});
+            } else {
+                if (data && data.mfa_required) {
+                if (!mfa_code) {
+                    resolve({'error' : 'mfa code required'});
+                } else {
+                    Robinhood.set_mfa_code(mfa_code, () => {
+                        Robinhood.investment_profile(function(err, response, body){
+                            if(err){
+                                console.error(err);
+                            }else{
+                                resolve(body);
+                            }
+
+                        });
+                    });
+                }
+                }
+                else {
+                    console.log("no mfa required")
+                    const token = Robinhood.auth_token();
+                }
+            }
+        });
+    });
+    return token;
+}
+
 module.exports = {
-    robinhood_get_auth
+    robinhood_get_auth,
+    robinhood_get_account
 }
