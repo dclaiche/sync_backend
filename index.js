@@ -1,10 +1,11 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 
-
 const app = express();
 app.enable('trust proxy');
 app.use(bodyParser.json());
+
+
 app.use('/', require('./routes/router'));
 // app.use(cors());
 

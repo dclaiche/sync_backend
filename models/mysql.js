@@ -5,8 +5,8 @@ class Database {
       if (!Database.instance) {
         this.pool = mysql.createPool({
             connectionLimit: 50,
-            host: "syncdb2.cluster-cjgbedur5ue8.us-west-1.rds.amazonaws.com",
-            user: "dclaiche",
+            host: "syncdb.cjgbedur5ue8.us-west-1.rds.amazonaws.com",
+            user: "admin",
             password: "Dxto80kgwvvl$",
             database: "SyncDB",
             waitForConnections: true,

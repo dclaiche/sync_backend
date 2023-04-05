@@ -33,12 +33,12 @@ const robinhood_get_auth = async (req, res) => {
         });
     });
 return token;
-
 }
 
 
 const robinhood_get_X = async (credentials, code, extra = null, apiFunction) => {
     const token = await new Promise(async (resolve, reject) => {
+        console.log(credentials);
         var Robinhood = require('robinhood')(credentials, async (err, data) => {
             var mfa_code = await getMfaToken(code);
             if(err) {
@@ -53,8 +53,7 @@ const robinhood_get_X = async (credentials, code, extra = null, apiFunction) => 
                         resolve({'error' : 'mfa code required'});
                     } else {
                         Robinhood.set_mfa_code(mfa_code, async () => {
-                            const body = extra ? await apiFunction(Robinhood) : await apiFunction(Robinhood);
-                            console.log(body)
+                            const body = extra ? await apiFunction(extra, Robinhood) : await apiFunction(Robinhood);
                             resolve(body)
                         });
                     }
