@@ -22,7 +22,7 @@ const validate_auth = async (req, res, next) => {
     // Change secret to be in .env file
     const secretKey = 'crazysynckey2121';
     const token = authHeader.split(' ')[1]
-    console.log(token);
+
 
     jwt.verify(
         token,

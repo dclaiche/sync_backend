@@ -6,7 +6,8 @@ app.enable('trust proxy');
 app.use(bodyParser.json());
 
 
-app.use('/', require('./routes/router'));
+app.use('/user', require('./routes/userRoutes'));
+app.use('/auth', require('./routes/authRoutes'));
 // app.use(cors());
 
 // set the PORT and listen

@@ -36,7 +36,7 @@ return token;
 }
 
 
-const robinhood_get_X = async (credentials, code, extra = null, apiFunction) => {
+const robinhood_execute_function = async (credentials, code, extra = null, apiFunction) => {
     const token = await new Promise(async (resolve, reject) => {
         console.log(credentials);
         var Robinhood = require('robinhood')(credentials, async (err, data) => {
@@ -71,6 +71,22 @@ const robinhood_get_X = async (credentials, code, extra = null, apiFunction) => 
 const investment_profile = async (Robinhood) => {
     const result = await new Promise(async (resolve, reject) => {
         Robinhood.investment_profile(function(err, response, body){
+            if(err){
+                const responseMatch = err.message.match(/\{.*\}/s);
+                const response = responseMatch ? responseMatch[0] : '{}';
+                const { statusCode, body } = JSON.parse(response);
+                resolve({'code' : statusCode, 'body' : body});
+            }else{
+                resolve(body);
+            }
+        });
+    });
+    return result;
+}
+
+const popularity = async (symbol, Robinhood) => {
+    const result = await new Promise(async (resolve, reject) => {
+        Robinhood.news(symbol, function(err, response, body){
             if(err){
                 const responseMatch = err.message.match(/\{.*\}/s);
                 const response = responseMatch ? responseMatch[0] : '{}';
@@ -267,7 +283,7 @@ const place_sell_order = async (options, Robinhood) => {
 
 module.exports = {
     robinhood_get_auth,
-    robinhood_get_X,
+    robinhood_execute_function,
     investment_profile,
     instruments,
     quoteData,
@@ -279,5 +295,6 @@ module.exports = {
     positions,
     nonzero_positions,
     place_buy_order,
-    place_sell_order
+    place_sell_order,
+    popularity
 }
