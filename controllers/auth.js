@@ -9,13 +9,12 @@ const secretKey = 'crazysynckey2121';
 // @desc Login
 // @route POST /auth
 // @access Public
-var count = 0;
 
 const login = async (req, res) => {
     // Logs in a user with a email and password 
     // returns a private JWT token granting access to the user's account with or without robinhood credentials
     const { password, email} = req.body;
-    const sql = `SELECT u.id, u.email, ak.robinhood_code, ak.robinhood_email, ak.robinhood_password
+    const sql = `SELECT u.id, u.email, ak.alpaca_key, ak.alpaca_secret
     FROM api_keys ak
     JOIN user u ON ak.user_id = u.id
     WHERE u.password = ? AND u.email = ?;
@@ -40,22 +39,14 @@ const login = async (req, res) => {
             UserInfo: {
                 email: rows[0].email,
                 id: rows[0].id,
-                robinhood_code: rows[0].robinhood_code,
-                robinhood_password: rows[0].robinhood_password,
-                robinhood_email: rows[0].robinhood_email
+                alpaca_key: rows[0].alpaca_key,
+                alpaca_secret: rows[0].alpaca_secret
             }}, secretKey, {expiresIn: '24h'});
         res.json(token);
     }
 }
 
-const testPopulate = async (req, res) => {
-    const {credentials, code, extra } = req.body;
-    const token = await robinhood_execute_function(credentials, code, extra, popularity);
-    handle_response(res, token)
-}
-
 
 module.exports = {
-    login,
-    testPopulate};
+    login};
 // get token, searches DB for token and returns it if found

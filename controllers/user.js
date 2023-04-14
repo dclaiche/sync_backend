@@ -2,6 +2,7 @@ const {robinhood_execute_function, investment_profile} = require('../models/robi
 const {handle_response} = require('../models/handlers');
 const Database = require('../models/mysql.js');
 const jwt = require('jsonwebtoken');
+const alpaca = require('../models/alpaca.js');
 
 const db = new Database();
 const secretKey = 'crazysynckey2121';
@@ -12,22 +13,20 @@ const secretKey = 'crazysynckey2121';
 
 // DATABASE FUNCTIONS FOR USER
 
-const createRobinhoodUser = async (req, res) => {
+const createAlpacaUser = async (req, res) => {
     // Adds a user's robinhood code to the database
     const {email, id} = req.userinfo;
-    const {credentials, code} = req.body;
-    const sql = `INSERT INTO api_keys (user_id, robinhood_code, robinhood_password, robinhood_email)
-    SELECT ?, ?, ?, ?
+    const {key, secret} = req.body;
+    const sql = `INSERT INTO api_keys (user_id, alpaca_key, alpaca_secret)
+    SELECT ?, ?, ?
     FROM DUAL
     WHERE NOT EXISTS (
         SELECT 1
         FROM api_keys
         WHERE user_id = ?
     );`;
-    console.log(`email: ${email}, user_id: ${id}, credentials: ${credentials}, code: ${code}`);
-    const params = [id, code, credentials.password, credentials.username, id];
+    const params = [id, key, secret, id];
     const rows = await db.statement(sql, params);
-    console.log(rows)
     if (rows.code) {
         res.status(400).json({error: rows.sqlMessage});
     }
@@ -39,10 +38,9 @@ const createRobinhoodUser = async (req, res) => {
             UserInfo: {
                 email: email,
                 id: id,
-                robinhood_code: code,
-                robinhood_password: credentials.password,
-                robinhood_email: credentials.username}
-            }, secretKey, {expiresIn: '24h'});
+                alpaca_key: key,
+                alpaca_secret: secret
+            }}, secretKey, {expiresIn: '24h'});
         res.status(200).json(token);
     }
 }
@@ -69,7 +67,6 @@ const createUser = async (req, res) => {
         const sql2 = `SELECT * FROM user WHERE password = ? AND email = ?`;
         const params2 = [password, email];
         const user = await db.statement(sql2, params2);
-        console.log(user);
         if (user.isempty) res.status(400).json({error: "Invalid Credentials"});
         else {
             const token = jwt.sign({
@@ -135,11 +132,6 @@ const deleteUser = async (req, res) => {
     }
 }
 
-async function get_investment_profile(req, res) {
-    const {credentials, code, extra, } = req.body;
-    const token = await robinhood_execute_function(credentials, code, extra, investment_profile);
-    handle_response(res, token);
-}
 
-module.exports = {createUser, get_investment_profile, createRobinhoodUser, updateUser, getUser, deleteUser};
+module.exports = {createUser, createAlpacaUser, updateUser, getUser, deleteUser};
 
