@@ -3,8 +3,12 @@ const base32 = require('hi-base32');
 
 const handle_response = (res, data) => {
     if (data) {
-        if(data.code) res.status(data.code).json(data.body);
-        else res.status(200).json(data);
+        if (data.code) {
+            res.status(data.code).json(data.body);
+        }
+        else {
+            res.status(200).json(data);
+        }
     } else {
         res.status(400).json({"error": "Unknown Error"});
     }

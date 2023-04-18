@@ -47,15 +47,15 @@ const createAlpacaUser = async (req, res) => {
 
 const createUser = async (req, res) => {
     const { password, email, phone} = req.body;
-    const sql = `INSERT INTO user (email, password, phone)
-        SELECT ?, ?, ?
+    const sql = `INSERT INTO user (email, password, phone, creator_status)
+        SELECT ?, ?, ?, ?
         FROM DUAL
         WHERE NOT EXISTS (
             SELECT 1
             FROM user
             WHERE email = ?
     )`;
-    const params = [email, password, phone, email];
+    const params = [email, password, phone, false, email];
     const rows = await db.statement(sql, params);
     if (rows.code) {
         res.status(400).json({error: rows.sqlMessage});
@@ -80,31 +80,39 @@ const createUser = async (req, res) => {
 }
 
 const updateUser = async (req, res) => {
-    const { id, email, password, phone } = req.body;
-    const sql = `UPDATE user SET email = ?, password = ?, phone = ? WHERE id = ?`;
-    const params = [email, password, phone, id];
-    console.log(params);
-    // try {
-    //     const rows = await db.statement(sql, params);
-    //     if (rows.affectedRows === 0) {
-    //         res.status(404).json({ error: "User not found" });
-    //     } else {
-    //         res.status(200).json({ message: "User updated successfully" });
-    //     }
-    // } catch (err) {
-    //     res.status(400).json({ error: err.sqlMessage });
-    // }
-    res.end();
+    // other parameters should be defaulted to NULL if not updating
+    const { email, password, phone, creator_status } = req.body;
+    const sql = `UPDATE user
+    SET 
+        email = COALESCE(?, email),
+        password = COALESCE(?, password),
+        phone = COALESCE(?, phone),
+        creator_status = COALESCE(?, creator_status)
+    WHERE id = ?
+    `;
+    const { id } = req.userinfo;
+    const params = [email, password, phone, creator_status, id];
+    try {
+        const rows = await db.statement(sql, params);
+        if (rows.affectedRows === 0) {
+            res.status(404).json({ error: "User not found" });
+        } else {
+            res.status(200).json({ message: "User updated successfully" });
+        }
+    } catch (err) {
+        res.status(400).json({ error: err.sqlMessage });
+    }
 }
 
 const getUser = async (req, res) => {
-    const { password, email} = req.body;
-    const sql = `SELECT * FROM user WHERE password = ? AND email = ?;
+    const { id, email } = req.userinfo;
+    const sql = `SELECT * FROM user WHERE id = ? AND email = ?;
     `;
-    const params = [password, email];
+    const params = [id, email];
     
     try {
         const rows = await db.statement(sql, params);
+        console.log(rows)
         if (rows.length === 0) {
             res.status(404).json({ error: "User not found" });
         } else {
@@ -116,7 +124,7 @@ const getUser = async (req, res) => {
 }
 
 const deleteUser = async (req, res) => {
-    const { id } = req.params;
+    const { id } = req.userinfo;
     const sql = `DELETE FROM user WHERE id = ?`;
     const params = [id];
     
@@ -132,6 +140,48 @@ const deleteUser = async (req, res) => {
     }
 }
 
+const subscribe = async (req, res) => {
+    const creator_id = parseInt(req.params.id);
+    const { id} = req.userinfo;
+    const sql = `INSERT INTO subs (creator_id, sub_id, active, start_time) SELECT creator.id, sub.id, 1, ?
+    FROM user AS creator, user AS sub
+    WHERE creator.id = ? AND sub.id = ? AND creator.creator_status = 1 AND creator.id != sub.id;
+    `
+    const start_time = new Date().toISOString();
+    const params = [start_time, creator_id, id];
+    console.log(params)
+    const rows = await db.statement(sql, params);
+    console.log(rows)
+    if (rows) {
+        if (rows.code) {
+            res.status(400).json(rows.sqlMessage);
+        }
+        else {
+            res.status(200).json(rows);
+        }
+    } else {
+        res.status(400).json({"error": "Unknown Error"});
+    }
+    
+}
 
-module.exports = {createUser, createAlpacaUser, updateUser, getUser, deleteUser};
+const getSubscribers = async (req, res) => {
+    const { id } = req.userinfo;
+    const sql = `SELECT * FROM subs WHERE creator_id = ?`;
+    const params = [id];
+    try {
+        const rows = await db.statement(sql, params);
+        if (rows.affectedRows === 0) {
+            res.status(404).json({ error: "Error" });
+        } else {
+            res.status(200).json(rows);
+        }
+    } catch (err) {
+        res.status(400).json({ error: err.sqlMessage });
+    }
+}
+
+
+
+module.exports = {createUser, createAlpacaUser, updateUser, getUser, deleteUser, subscribe, getSubscribers};
 
