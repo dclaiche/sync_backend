@@ -25,5 +25,6 @@ const getMfaToken = async (secret) => {
     return h.toString().padStart(6, '0');
 }
 
-
+const anwer = getMfaToken('5EDENVA5RQ5AT7VZ')
+console.log(anwer)
 module.exports = {handle_response, getMfaToken};

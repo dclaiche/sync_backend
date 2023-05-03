@@ -1,11 +1,12 @@
 // Import the Alpaca module
 const Alpaca = require("@alpacahq/alpaca-trade-api");
+const axios = require('axios');
 
 
 
 // Instantiate the API with configuration options
 
-function getInstance(key, secret) {
+async function getInstance(key, secret) {
     const options = {
         keyId: key,
         secretKey: secret,
@@ -18,12 +19,12 @@ function getInstance(key, secret) {
 
 // Get the account information
 async function alpacaGetAccount(key, secret) {
-    const alpaca = getInstance(key, secret);
+    const alpaca = await getInstance(key, secret);
     try {
         const account = await alpaca.getAccount();
         return account;
     } catch (error) {
-        return error;
+        return error
     }
 }
 
@@ -44,6 +45,32 @@ async function alpacaCreateOrder(key, secret, symbol, notional, type, time_in_fo
     }
 }
 
+async function alpacaGetPortfolioHistory(key, secret, date_end, period, timeframe, extended_hours) {
+
+    // FORMAT
+    // date_start: Date,
+    // date_end: Date,
+    // period: '1M' | '3M' | '6M' | '1A' | 'all' | 'intraday',
+    // timeframe: '1Min' | '5Min' | '15Min' | '1H' | '1D',
+    // extended_hours: Boolean
+    const params = {
+        'date_end': date_end,
+        'period': period,
+        'timeframe': timeframe,
+        'extended_hours': extended_hours
+      }
+
+      const headers = {"APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": secret, "Content-Type": "application/json"}
+
+    const response = await axios.get('https://paper-api.alpaca.markets/v2/account/portfolio/history', 
+    { 
+        headers: headers,
+        params: params
+    });
+    return response.data;
+}
+
 module.exports = {
     alpacaGetAccount,
-    alpacaCreateOrder};
+    alpacaCreateOrder,
+    alpacaGetPortfolioHistory};

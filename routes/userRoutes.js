@@ -14,6 +14,7 @@ router.get('/', validate_auth, userController.getUser);
 router.delete('/', validate_auth, userController.deleteUser);
 router.put('/:id', validate_auth, userController.subscribe);
 router.get('/subscribers', validate_auth, userController.getSubscribers);
-
+router.post('/setup', validate_auth, userController.getAlpacaUser);
+router.get('/check-account', validate_auth, userController.checkAccount);
 
 module.exports = router;

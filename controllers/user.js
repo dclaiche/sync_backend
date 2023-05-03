@@ -17,31 +17,70 @@ const createAlpacaUser = async (req, res) => {
     // Adds a user's robinhood code to the database
     const {email, id} = req.userinfo;
     const {key, secret} = req.body;
-    const sql = `INSERT INTO api_keys (user_id, alpaca_key, alpaca_secret)
-    SELECT ?, ?, ?
-    FROM DUAL
-    WHERE NOT EXISTS (
-        SELECT 1
-        FROM api_keys
-        WHERE user_id = ?
-    );`;
-    const params = [id, key, secret, id];
-    const rows = await db.statement(sql, params);
-    if (rows.code) {
-        res.status(400).json({error: rows.sqlMessage});
+    if (!key || !secret) {
+        res.status(400).json({error: "Missing key or secret"});
+        return;
     }
-    else if (rows.affectedRows === 0) {
-        res.status(400).json({error: "User already has registered robinhood account exists"});
-    }
-    else if (rows.affectedRows === 1) {
-        const token = jwt.sign({
-            UserInfo: {
-                email: email,
-                id: id,
-                alpaca_key: key,
-                alpaca_secret: secret
-            }}, secretKey, {expiresIn: '24h'});
-        res.status(200).json(token);
+    const checkAccount = await alpaca.alpacaGetAccount(key, secret);
+    if (checkAccount.message) {
+        res.status(parseInt(checkAccount.message.slice(-3))).json({error: checkAccount.message});
+    } 
+    else {
+        const sql = `INSERT INTO api_keys (user_id, alpaca_key, alpaca_secret)
+        SELECT ?, ?, ?
+        FROM DUAL
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM api_keys
+            WHERE user_id = ?
+        );`;
+        const params = [id, key, secret, id];
+        const rows = await db.statement(sql, params);
+        if (rows.code) {
+            res.status(400).json({error: rows.sqlMessage});
+        }
+        else if (rows.affectedRows === 0) {
+            res.status(400).json({error: "User already has registered alpaca account exists"});
+        }
+        else if (rows.affectedRows === 1) {
+            const token = jwt.sign({
+                UserInfo: {
+                    email: email,
+                    id: id,
+                    alpaca_key: key,
+                    alpaca_secret: secret
+                }}, secretKey, {expiresIn: '24h'});
+            res.status(200).json(token);
+        }
+     }
+}
+
+const checkAccount = async (req, res) => {
+    const {email, id, alpaca_key, alpaca_secret} = req.userinfo;
+    const sql = `SELECT * FROM user WHERE id = ? AND email = ?;`;
+    const params = [id, email];
+    try {
+        const rows = await db.statement(sql, params);
+        if (rows.length === 0) {
+            console.log("User not found")
+            res.status(404).json({ error: "User not found" });
+        } else {
+            if (!alpaca_key || !alpaca_secret) {
+                console.log("Missing key or secret")
+                res.status(400).json({error: "Missing key or secret"});
+            } else {
+                const token = await alpaca.alpacaGetAccount(alpaca_key, alpaca_secret);
+                if (token.message) {
+                    console.log("Error with alpaca")
+                    res.status(parseInt(token.message.slice(-3))).json({error: token.message});
+                } else {
+                    console.log("Both account exists")
+                    res.status(200).json(token);
+                }
+            }
+        }
+    } catch (err) {
+        res.status(400).json({ error: err.sqlMessage });
     }
 }
 
@@ -74,7 +113,15 @@ const createUser = async (req, res) => {
                 email: user[0].email,
                 id: user[0].id
             }}, secretKey, {expiresIn: '24h'});
-            res.json(token);
+        res.json({
+            token: token,
+            user: {
+                id: user[0].id,
+                email: user[0].email,
+                phone: user[0].phone,
+                creator_status: user[0].creator_status
+            }
+        });
         }
     }
 }
@@ -104,6 +151,13 @@ const updateUser = async (req, res) => {
     }
 }
 
+const getAlpacaUser = async (req, res) => {
+    const { alpaca_key, alpaca_secret } = req.userinfo;
+    const { date_end, period, timeframe, extended_hours} = req.body;
+    const response = await alpaca.alpacaGetPortfolioHistory(alpaca_key, alpaca_secret, date_end, period, timeframe, extended_hours);
+    res.status(200).json(response);
+}
+
 const getUser = async (req, res) => {
     const { id, email } = req.userinfo;
     const sql = `SELECT * FROM user WHERE id = ? AND email = ?;
@@ -112,7 +166,6 @@ const getUser = async (req, res) => {
     
     try {
         const rows = await db.statement(sql, params);
-        console.log(rows)
         if (rows.length === 0) {
             res.status(404).json({ error: "User not found" });
         } else {
@@ -149,9 +202,7 @@ const subscribe = async (req, res) => {
     `
     const start_time = new Date().toISOString();
     const params = [start_time, creator_id, id];
-    console.log(params)
     const rows = await db.statement(sql, params);
-    console.log(rows)
     if (rows) {
         if (rows.code) {
             res.status(400).json(rows.sqlMessage);
@@ -183,5 +234,5 @@ const getSubscribers = async (req, res) => {
 
 
 
-module.exports = {createUser, createAlpacaUser, updateUser, getUser, deleteUser, subscribe, getSubscribers};
+module.exports = {createUser, createAlpacaUser, updateUser, getUser, deleteUser, subscribe, getSubscribers, getAlpacaUser, checkAccount};
 

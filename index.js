@@ -6,12 +6,18 @@ const Alpaca = require("@alpacahq/alpaca-trade-api");
 const app = express();
 app.enable('trust proxy');
 app.use(bodyParser.json());
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "YOUR-DOMAIN.TLD"); // update to match the domain you will make the request from
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+//app.use(cors());
 
 
 app.use('/user', require('./routes/userRoutes'));
 app.use('/auth', require('./routes/authRoutes'));
 app.use('/trader', require('./routes/tradeRoutes'));
-// app.use(cors());
+
 
 const db = new Database();
 var last_check = new Date().toISOString();
@@ -49,12 +55,15 @@ async function checkUserPositions() {
             ?, ?, ?, ?
           );
           `
-          console.log(order)
           var params = Object.values(order);
           params.push(user.id);
-          console.log(params)
-          const rows = await db.statement(sql, params);
-          console.log(rows);
+          try {
+            const rows = await db.statement(sql, params);
+            if (rows.affectedRows === 1) {
+              console.log('Added order to DB');
+            }
+          }
+          catch (error) { console.error('Error adding order to DB:', error.message); }
         }
       }
       last_check = new Date().toISOString();
@@ -65,7 +74,7 @@ async function checkUserPositions() {
   }
 
   checkUserPositions();
-  setInterval(checkUserPositions, 30 * 1000); // Check for new users every 30 seconds
+ // setInterval(checkUserPositions, 30 * 1000); // Check for new users every 30 seconds
 
 // set the PORT and listen
 const PORT = process.env.PORT || 8080;
