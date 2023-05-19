@@ -57,6 +57,7 @@ async function alpacaGetPortfolioHistory(key, secret, date_end, period, timefram
         'date_end': date_end,
         'period': period,
         'timeframe': timeframe,
+        
         'extended_hours': extended_hours
       }
 
